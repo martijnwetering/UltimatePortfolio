@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ItemListView: View {
     let title: LocalizedStringKey
-    let items: FetchedResults<Item>.SubSequence
+    let items: ArraySlice<Item>
 
     var itemTitle: some View {
         Text(title)

@@ -3,6 +3,7 @@
 "OK" = "OK";
 "Delete" = "Delete";
 "Basic settings" = "Basic settings";
+"Cancel" = "Cancel";
 
 
 
@@ -41,13 +42,16 @@
 "New Project" = "New Project";
 "New Item" = "New Item";
 
-
-
 /* EDITING PROJECTS */
 "Edit Project" = "Edit Project";
 "Project name" = "Project name";
 "Description of this project" = "Description of this project";
 "Custom project color" = "Custom project color";
+"Check settings" = "Check settings";
+"Show reminders" = "Show reminders";
+"Project reminders" = "Project reminders";
+"Oops!" = "Oops!";
+"There was a problem. Please make sure you have notifications enabled." = "There was a problem. Please make sure you have notifications enabled.";
 
 /* Options to close (mark as finished), open (mark as unfinished), or delete a project. */
 "Close this project" = "Close this project";

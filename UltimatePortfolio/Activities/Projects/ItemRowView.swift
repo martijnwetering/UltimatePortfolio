@@ -8,27 +8,25 @@
 import SwiftUI
 
 struct ItemRowView: View {
-    @ObservedObject var project: Project
+    @StateObject var viewModel: ViewModel
     @ObservedObject var item: Item
-
-    // If a property it should have a constant time complexity
-    func icon() -> some View {
-        if item.completed {
-            return Image(systemName: "checkmark.circle")
-                .foregroundColor(Color(project.projectColor))
-        } else if item.priority == 3 {
-            return Image(systemName: "exclamationmark.triangle")
-                .foregroundColor(Color(project.projectColor))
-        } else {
-            return Image(systemName: "checkmark.circle")
-                .foregroundColor(.clear)
-        }
-    }
 
     var body: some View {
         NavigationLink(destination: EditItemView(item: item)) {
-            Label(title: { Text(item.itemTitle) }, icon: icon)
+            Label {
+                Text(viewModel.label)
+            } icon: {
+                Image(systemName: viewModel.icon)
+                    .foregroundColor(viewModel.color.map { Color($0) } ?? .clear)
+            }
         }
+    }
+
+    init(project: Project, item: Item) {
+        let viewModel = ViewModel(project: project, item: item)
+        _viewModel = StateObject(wrappedValue: viewModel)
+
+        self.item = item
     }
 }
 

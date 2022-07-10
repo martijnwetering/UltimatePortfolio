@@ -6,13 +6,15 @@
 //
 
 import CoreData
+import CoreSpotlight
 import SwiftUI
+import UserNotifications
 
 class DataController: ObservableObject {
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(name: "Main")
+        container = NSPersistentCloudKitContainer(name: "Main", managedObjectModel: Self.model)
 
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "dev/null")
@@ -35,6 +37,18 @@ class DataController: ObservableObject {
         }
 
         return dataController
+    }()
+
+    static let model: NSManagedObjectModel = {
+        guard let url = Bundle.main.url(forResource: "Main", withExtension: "momd") else {
+            fatalError("Failed to locate model file.")
+        }
+
+        guard let model = NSManagedObjectModel(contentsOf: url) else {
+            fatalError("Failed to load model file")
+        }
+
+        return model
     }()
 
     func createSampleData() throws {
@@ -68,8 +82,18 @@ class DataController: ObservableObject {
         }
     }
 
-    func delete(_ object: NSManagedObject) {
-        container.viewContext.delete(object)
+    func delete(_ project: Project) {
+        let id = project.objectID.uriRepresentation().absoluteString
+        CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [id])
+
+        container.viewContext.delete(project)
+    }
+
+    func delete(_ item: Item) {
+        let id = item.objectID.uriRepresentation().absoluteString
+        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: [id])
+
+        container.viewContext.delete(item)
     }
 
     func deleteAll() {
@@ -101,6 +125,106 @@ class DataController: ObservableObject {
         default:
             //            fatalError("Unknown award criterion: \(award.criterion)")
             return false
+        }
+    }
+
+    func update(_ item: Item) {
+        let itemId = item.objectID.uriRepresentation().absoluteString
+        let projectId = item.project?.objectID.uriRepresentation().absoluteString
+
+        let attributeSet = CSSearchableItemAttributeSet(contentType: .text)
+        attributeSet.title = item.itemTitle
+        attributeSet.contentDescription = item.itemDetail
+
+        let searchableItem = CSSearchableItem(
+            uniqueIdentifier: itemId,
+            domainIdentifier: projectId,
+            attributeSet: attributeSet
+        )
+
+        CSSearchableIndex.default().indexSearchableItems([searchableItem])
+
+        save()
+    }
+
+    func item(with uniqueIdentifier: String) -> Item? {
+        guard let url = URL(string: uniqueIdentifier) else {
+            return nil
+        }
+
+        guard let id = container.persistentStoreCoordinator.managedObjectID(forURIRepresentation: url) else {
+            return nil
+        }
+
+        return try? container.viewContext.existingObject(with: id) as? Item
+    }
+
+    func addReminders(for project: Project, completion: @escaping (Bool) -> Void) {
+        let center = UNUserNotificationCenter.current()
+
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .authorized:
+                self.placeReminders(for: project, completion: completion)
+            case .notDetermined:
+                self.requestNotification { success in
+                    if success {
+                        self.placeReminders(for: project, completion: completion)
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(false)
+                        }
+                    }
+                }
+            default:
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+            }
+        }
+    }
+
+    func removeReminders(for project: Project) {
+        let center = UNUserNotificationCenter.current()
+        let id = project.objectID.uriRepresentation().absoluteString
+
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+    }
+
+    private func requestNotification(completion: @escaping (Bool) -> Void) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            completion(granted)
+        }
+    }
+
+    private func placeReminders(for project: Project, completion: @escaping (Bool) -> Void) {
+        let content = UNMutableNotificationContent()
+
+        content.title = project.projectTitle
+        content.sound = .default
+
+        if let detail = project.detail {
+            content.subtitle = detail
+        }
+
+        let components = Calendar.current.dateComponents(
+            [.hour, .minute],
+            from: project.reminderTime ?? Date()
+        )
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+
+        let id = project.objectID.uriRepresentation().absoluteString
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            DispatchQueue.main.async {
+                if error == nil {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
         }
     }
 }
