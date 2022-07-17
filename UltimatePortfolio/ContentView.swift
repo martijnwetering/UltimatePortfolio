@@ -43,10 +43,16 @@ struct ContentView: View {
                 }
         }
         .onContinueUserActivity(CSSearchableItemActionType, perform: moveToHome)
+        .onOpenURL(perform: openUrl)
     }
 
     func moveToHome(_ input: Any) {
         selectedView = HomeView.homeTag
+    }
+
+    func openUrl(_ url: URL) {
+        selectedView = ProjectsView.openTag
+        dataController.addProject()
     }
 }
 

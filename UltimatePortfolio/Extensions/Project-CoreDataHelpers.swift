@@ -66,7 +66,7 @@ extension Project {
         guard originalItems.isEmpty == false else { return 0 }
 
         let completedItems = originalItems.filter(\.completed)
-        return Double(originalItems.count) / Double(completedItems.count)
+        return Double(completedItems.count) / Double(originalItems.count)
     }
 
     var label: LocalizedStringKey {

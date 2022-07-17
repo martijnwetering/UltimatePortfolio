@@ -94,8 +94,10 @@ struct ProjectsView: View {
 
             SelectSomethingView()
         }
+        .sheet(isPresented: $viewModel.showUnlockView) {
+            UnlockView()
+        }
     }
-
 }
 
 struct ProjectsView_Previews: PreviewProvider {
